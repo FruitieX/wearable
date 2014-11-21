@@ -1,11 +1,14 @@
 #include <Adafruit_NeoPixel.h>
-#define PIXELSPIN      0
-#define NUMPIXELS      2
+// digital pin 1
+#define PIXELSPIN      1
+#define NUMPIXELS      4
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIXELSPIN, NEO_GRB + NEO_KHZ800);
 
-// both digital and analog pins 1 are used
+// analog pin 1
 #define INPUT_PIN 1
+// digital pin 0
+#define CHANGE_PIN 0
 
 int value;
 
@@ -17,7 +20,7 @@ int b;
 int colorChanged = 0;
 
 // how much to subtract from the analog input value
-int calibration = 935;
+int calibration = 645;
 
 void randColors() {
   r = random(0, 256);
@@ -31,18 +34,30 @@ void setup() {
   randColors();
 }
 
+int avgVal = 0;
+int vals[4] = {0};
+
 void loop() {
-  value = constrain((analogRead(INPUT_PIN) - calibration), 0, 255);
+  value = constrain((analogRead(INPUT_PIN) - calibration) * 10, 0, 255);
+
+  avgVal = 0.9 * avgVal + 0.1 * value;
   
-  for(int i=0; i<NUMPIXELS; i++) {
-    pixels.setPixelColor(0, pixels.Color(value * (r / 255.0), value * (g / 255.0), value * (b / 255.0)));
-    pixels.show();
+  vals[0] = constrain(avgVal * 4, 0, 255);
+  vals[1]= constrain((avgVal - 64) * 4, 0, 255);
+  vals[2] = constrain((avgVal - 128) * 4, 0, 255);
+  vals[3] = constrain((avgVal - 192) * 4, 0, 255);
+  
+  for(int i = 0; i < 4; i++) {
+    pixels.setPixelColor(i, pixels.Color(vals[i] * (r / 255.0), vals[i] * (g / 255.0), vals[i] * (b / 255.0)));
   }
+  pixels.show();
   
-  if(digitalRead(INPUT_PIN) && !colorChanged) {
+  if(digitalRead(CHANGE_PIN) && !colorChanged) {
     randColors();
     colorChanged = 1;
-  } else if (!digitalRead(INPUT_PIN)) {
+  } else if (!digitalRead(CHANGE_PIN)) {
     colorChanged = 0;
   }
+  delay(25);
 }
+
